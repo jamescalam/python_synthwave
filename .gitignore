@@ -1,0 +1,35 @@
+.idea/
+assets/
+models/tmp/
+
+code/training_checkpoints/
+code/__pycache__/
+code/.ipynb_checkpoints/
+
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# IPython
+profile_default/
+ipython_config.py
+
+# model data
+*.json
+*.h5
+
+.idea/
+secret/
+
+gan/**/*.mp4
+gan/data/
+gan/**/*.jpg
+
+gan/.idea/
+gan/**/.ipynb_checkpoints
