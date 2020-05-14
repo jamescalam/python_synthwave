@@ -30,6 +30,12 @@ secret/
 gan/**/*.mp4
 gan/data/
 gan/**/*.jpg
+gan/visuals
 
 gan/.idea/
 gan/**/.ipynb_checkpoints
+
+gan/**/email.txt
+gan/**/password.txt
+
+gan/models/

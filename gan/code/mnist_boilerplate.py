@@ -26,6 +26,6 @@ D.mnist_dcgan()  # switch to mnist dataset model
 D.optimiser(D_OPT)  # setup optimiser
 D.model.summary()  # print model summary
 
-model = m.Train(G, D, 28, 28, BATCHSIZE, LATENT_UNITS)
+model = m.Train(G, D, BATCHSIZE, LATENT_UNITS)
 
 model.fit(data.data, EPOCHS, VIS)

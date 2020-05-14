@@ -8,12 +8,53 @@ import tensorflow as tf
 from mnist import MNIST
 
 
+def downsample_rgb(array, downsample):
+    """
+    Function to downsample RGB array dimensions without affecting colour
+    dimensions.
+    """
+    r = skimage.measure.block_reduce(array[:, :, 0], (downsample, downsample), np.mean)
+    g = skimage.measure.block_reduce(array[:, :, 1], (downsample, downsample), np.mean)
+    b = skimage.measure.block_reduce(array[:, :, 2], (downsample, downsample), np.mean)
+    return np.stack((r, g, b), axis=-1)
+
+def import_image(path, colour, downsample):
+    # load the image
+    image = Image.open(path)
+    if colour:
+        pass
+    else:
+        # convert to grayscale
+        image = image.convert('L')
+        
+    # resize image if needed
+    if image.size != (640, 360):
+        # alert user
+        print(f"Resizing image from {image.size} to (640, 360).")
+        image = image.resize((640, 360))
+
+    # convert to numpy array
+    array = np.asarray(image)
+
+    if not colour:
+        # grayscale downsampling is easy
+        array = skimage.measure.block_reduce(array, (downsample, downsample), np.mean)
+    else:
+        # rgb downsampling is still easy but required different method
+        array = downsample_rgb(array, downsample)
+
+    return array/127.5-1  # divide by 127.5 acts as normalisation
+    
+
+
 class GetVideo:
     def __init__(self, http):
         # check if video is part of playlist
         if "&list" in http:
             # if it is, remove playlist part of http
             http = http.split("&list")[0]
+            
+        print(f"Downloading '{http}'.")
 
         video = YouTube(http)  # initialise video object
         # download to videos/tmp
@@ -91,38 +132,35 @@ class Mnist:
         self.data = self.data.shuffle(buffer).batch(batchsize, drop_remainder=True)
 
 class Data:
-    def __init__(self, color=False):
+    def __init__(self, colour=False, downsample=1, limit=1000):
         self.data = []
 
         for i, img in enumerate(os.listdir('../videos/img')):
-            # load the image
-            image = Image.open(os.path.join("../videos/img", img))
-            if color:
-                pass
-            else:
-                # convert to grayscale
-                image = image.convert('L')
-            # convert to numpy array
-            array = np.asarray(image)
-
+            
+            path = os.path.join("../videos/img", img)
+            self.data.append(import_image(path, colour, downsample))
+            
+            # update user every 10 images
             if i % 10 == 0:
                 print(f"Loaded image {i}")
 
-            if array.shape[0] == 360 and array.shape[1] == 640 and not color:
-                array = skimage.measure.block_reduce(array, (5, 5), np.mean)
-                self.data.append(array/255.)  # divide by 255 acts as normalisation
-            elif array.shape[0] == 360 and array.shape[1] == 640 and color:
-                array = skimage.measure.block_reduce(array, (5, 5), np.mean)
-                self.data.append(array/255.)  # divide by 255 acts as normalisation
-            else:
-                print(f"shape[0] = {array.shape[0]}\nshape[1] = {array.shape[1]}")
+            if i >= limit:
+                print("Image limit reached.")
+                break
 
-        self.width, self.height = self.data[0].shape
+        if colour:
+            self.height, self.width, self.depth = self.data[0].shape
+        else:
+            self.height, self.width = self.data[0].shape
+            self.depth = 1
 
     def format_data(self, buffer, batchsize):
-        # reshape
-        self.data = [np.reshape(x, (x.shape[0], x.shape[1], 1)) for x in self.data]
+        # if using grayscale, must make array 3-D with depth/z = 1
+        if self.depth == 1:
+            self.data = [np.reshape(x, (x.shape[0], x.shape[1], 1)) for x in self.data]
+        # convert to TF dataset object
         self.data = tf.data.Dataset.from_tensor_slices(self.data)
+        # shuffle the data and place into batches
         self.data = self.data.shuffle(buffer).batch(batchsize, drop_remainder=True)
 
     def shapes(self):
